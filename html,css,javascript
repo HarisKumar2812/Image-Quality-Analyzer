@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Image Analyzer</title>
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --primary-dark: #3a5a80;
+            --danger: #dc3545;
+            --danger-dark: #c82333;
+            --warning: #ffc107;
+            --warning-dark: #e0a800;
+            --success: #28a745;
+            --gray: #6c757d;
+            --light-gray: #f8f9fa;
+            --fun-color: #9c27b0;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            width: 95%;
+            max-width: 900px;
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin: 2rem 0;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-size: 2.2rem;
+        }
+        
+        .upload-area {
+            border: 3px dashed #ccc;
+            border-radius: 10px;
+            padding: 2.5rem;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            text-align: center;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(74, 111, 165, 0.05);
+        }
+        
+        .upload-area.dragover {
+            background: rgba(74, 111, 165, 0.1);
+            border-color: var(--primary);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            margin: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-remove {
+            background: var(--danger);
+        }
+        
+        .btn-remove:hover {
+            background: var(--danger-dark);
+        }
+        
+        .btn-suggestions {
+            background: var(--warning);
+            color: #212529;
+        }
+        
+        .btn-suggestions:hover {
+            background: var(--warning-dark);
+        }
+        
+        .btn-fun {
+            background: var(--fun-color);
+        }
+        
+        .btn-fun:hover {
+            background: #7b1fa2;
+        }
+        
+        .image-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 1.5rem 0;
+        }
+        
+        .image-box {
+            width: 100%;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+        
+        .image-box img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+        }
+        
+        .image-label {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+        
+        .analysis-result {
+            background: var(--light-gray);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            text-align: left;
+        }
+        
+        .good-quality {
+            border-left: 5px solid var(--success);
+            background: #e8f5e9;
+        }
+        
+        .bad-quality {
+            border-left: 5px solid var(--danger);
+            background: #fce8e8;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 7px;
+            z-index: 10;
+            flex-direction: column;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .suggestions-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #fff3cd;
+            border-radius: 5px;
+            border-left: 4px solid var(--warning);
+        }
+        
+        .fun-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f3e5f5;
+            border-radius: 5px;
+            border-left: 4px solid var(--fun-color);
+        }
+        
+        .suggestions-list, .fun-list {
+            margin-top: 0.5rem;
+            padding-left: 1.5rem;
+        }
+        
+        .suggestions-list li, .fun-list li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .analysis-section {
+            margin-top: 1rem;
+        }
+        
+        .analysis-section h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .prediction-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .prediction-label {
+            font-weight: 600;
+        }
+        
+        .prediction-value {
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .fun-fact {
+            font-style: italic;
+            color: var(--fun-color);
+            margin-top: 0.5rem;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .upload-area {
+                padding: 1.5rem;
+            }
+            
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                margin: 0.25rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Image Analyzer</h1>
+        
+        <div class="upload-area" id="dropArea">
+            <div class="upload-icon">📁</div>
+            <p>Drag & Drop your image here or</p>
+            <input type="file" id="fileInput" accept="image/*">
+            <button class="btn" id="browseBtn">Browse Files</button>
+        </div>
+        
+        <div class="image-container hidden" id="imageContainer">
+            <div class="image-box">
+                <div class="image-label">Your Image</div>
+                <img id="uploadedImage" src="" alt="Uploaded Image">
+            </div>
+            
+            <div class="analysis-result hidden" id="analysisResult">
+                <h3>Quality Analysis</h3>
+                <div id="qualityText"></div>
+                <div id="tryAnother" class="hidden"></div>
+                <div id="suggestionsPanel" class="suggestions-panel hidden"></div>
+                <div id="funPanel" class="fun-panel hidden"></div>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="btn" id="downloadBtn" disabled>Download Image</button>
+            <button class="btn btn-remove" id="removeBtn" disabled>Remove Image</button>
+            <button class="btn btn-suggestions hidden" id="suggestionsBtn">Show Suggestions</button>
+            <button class="btn btn-fun hidden" id="funBtn">Social Media Fun</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            const uploadedImage = document.getElementById('uploadedImage');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const removeBtn = document.getElementById('removeBtn');
+            const suggestionsBtn = document.getElementById('suggestionsBtn');
+            const funBtn = document.getElementById('funBtn');
+            const imageContainer = document.getElementById('imageContainer');
+            const analysisResult = document.getElementById('analysisResult');
+            const qualityText = document.getElementById('qualityText');
+            const tryAnother = document.getElementById('tryAnother');
+            const suggestionsPanel = document.getElementById('suggestionsPanel');
+            const funPanel = document.getElementById('funPanel');
+            
+            let isPoorQuality = false;
+            let suggestionsVisible = false;
+            let funVisible = false;
+            
+            // Social media fun predictions
+            const funPredictions = [
+                "This pic is so fire, even your ex will double-tap! 🔥",
+                "1K likes? Try 10K! This is influencer material right here!",
+                "Warning: This photo may cause sudden follower spikes 📈",
+                "Your DMs are about to get BUSY with this one 😏",
+                "Even Instagram's algorithm will pause to admire this masterpiece",
+                "This photo has 'viral challenge' written all over it",
+                "Your future grandkids will use this as their #ThrowbackThursday post",
+                "This pic is so good, it should come with a blue checkmark ✅",
+                "Photographers hate this one simple trick to get perfect pics!",
+                "If this was a stock photo, it would cost $500 per download 💰"
+            ];
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            // Handle dropped files
+            dropArea.addEventListener('drop', handleDrop, false);
+            
+            // Handle file selection via browse button
+            browseBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', handleFiles);
+            
+            // Download button event
+            downloadBtn.addEventListener('click', downloadImage);
+            
+            // Remove button event
+            removeBtn.addEventListener('click', removeImage);
+            
+            // Suggestions button event
+            suggestionsBtn.addEventListener('click', toggleSuggestions);
+            
+            // Fun button event
+            funBtn.addEventListener('click', toggleFunPanel);
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            function highlight() {
+                dropArea.classList.add('dragover');
+            }
+            
+            function unhighlight() {
+                dropArea.classList.remove('dragover');
+            }
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles({ target: { files } });
+            }
+            
+            function handleFiles(e) {
+                const files = e.target.files;
+                if (files.length) {
+                    const file = files[0];
+                    if (file.type.startsWith('image/')) {
+                        showLoading(true);
+                        processImage(file);
+                    } else {
+                        alert('Please select an image file.');
+                    }
+                }
+            }
+            
+            function processImage(file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    uploadedImage.src = event.target.result;
+                    
+                    // Analyze the image after it loads
+                    uploadedImage.onload = function() {
+                        analyzeImage(this);
+                        imageContainer.classList.remove('hidden');
+                        downloadBtn.disabled = false;
+                        removeBtn.disabled = false;
+                        showLoading(false);
+                    };
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            
+            function analyzeImage(imgElement) {
+                // Reset UI state
+                isPoorQuality = false;
+                suggestionsVisible = false;
+                funVisible = false;
+                suggestionsBtn.classList.add('hidden');
+                funBtn.classList.add('hidden');
+                suggestionsPanel.classList.add('hidden');
+                funPanel.classList.add('hidden');
+                suggestionsBtn.textContent = 'Show Suggestions';
+                funBtn.textContent = 'Social Media Fun';
+                
+                // Basic quality analysis
+                const width = imgElement.naturalWidth;
+                const height = imgElement.naturalHeight;
+                const aspectRatio = width / height;
+                const megapixels = (width * height) / 1000000;
+                const brightness = getImageBrightness(imgElement);
+                const issues = [];
+                const suggestions = [];
+                
+                // Check resolution
+                if (megapixels < 1) {
+                    issues.push("Low resolution (less than 1 megapixel)");
+                    suggestions.push("Use a higher resolution camera or reduce cropping");
+                    suggestions.push("Try upscaling tools like Photoshop or online AI upscalers");
+                    isPoorQuality = true;
+                }
+                
+                // Check dimensions
+                if (width < 1000 || height < 1000) {
+                    issues.push("Small dimensions (less than 1000px on either side)");
+                    suggestions.push("Capture images at higher resolution settings");
+                    suggestions.push("Avoid heavy cropping that reduces usable pixels");
+                    isPoorQuality = true;
+                }
+                
+                // Check aspect ratio
+                if (aspectRatio < 0.5 || aspectRatio > 2) {
+                    issues.push("Unusual aspect ratio (may not display well on most platforms)");
+                    suggestions.push("Crop to standard ratios like 1:1, 4:3, or 16:9");
+                    suggestions.push("Consider adding borders to fit standard dimensions");
+                    isPoorQuality = true;
+                }
+                
+                // Check brightness
+                if (brightness < 30) {
+                    issues.push("Image may be too dark");
+                    suggestions.push("Increase brightness in photo editing software");
+                    suggestions.push("Use fill flash or better lighting when capturing");
+                    isPoorQuality = true;
+                } else if (brightness > 200) {
+                    issues.push("Image may be overexposed");
+                    suggestions.push("Reduce exposure in photo editing software");
+                    suggestions.push("Use proper exposure settings when capturing");
+                    isPoorQuality = true;
+                }
+                
+                // Display analysis results
+                analysisResult.classList.remove('hidden');
+                
+                if (!isPoorQuality) {
+                    analysisResult.className = "analysis-result good-quality";
+                    qualityText.innerHTML = `
+                        <p><strong>✅ High Quality Image</strong></p>
+                        <div class="prediction-item">
+                            <span class="prediction-label">Resolution:</span>
+                            <span class="prediction-value">${width} × ${height} (${megapixels.toFixed(1)} MP)</span>
+                        </div>
+                        <div class="prediction-item">
+                            <span class="prediction-label">Aspect Ratio:</span>
+                            <span class="prediction-value">${aspectRatio.toFixed(2)}</span>
+                        </div>
+                        <div class="prediction-item">
+                            <span class="prediction-label">Brightness:</span>
+                            <span class="prediction-value">${brightness.toFixed(0)}/255</span>
+                        </div>
+                        <div class="fun-fact">This image meets all quality standards for professional use!</div>
+                    `;
+                    
+                    // Show fun button for good quality images
+                    funBtn.classList.remove('hidden');
+                    
+                    // Set fun content
+                    const randomFun = funPredictions[Math.floor(Math.random() * funPredictions.length)];
+                    funPanel.innerHTML = `
+                        <h4>🌟 Social Media Superstar Potential 🌟</h4>
+                        <p>${randomFun}</p>
+                        <ul class="fun-list">
+                            <li>Perfect for Instagram grid - will make your profile look pro!</li>
+                            <li>Facebook will probably boost this post automatically</li>
+                            <li>Twitter users might actually stop scrolling to like this</li>
+                            <li>LinkedIn recruiters will think you're a branding genius</li>
+                        </ul>
+                        <p class="fun-fact">Pro Tip: Post between 7-9pm with 5 relevant hashtags for maximum engagement!</p>
+                    `;
+                    
+                    tryAnother.classList.add('hidden');
+                } else {
+                    analysisResult.className = "analysis-result bad-quality";
+                    qualityText.innerHTML = `
+                        <p><strong>⚠️ Quality Issues Detected</strong></p>
+                        <div class="prediction-item">
+                            <span class="prediction-label">Resolution:</span>
+                            <span class="prediction-value">${width} × ${height} (${megapixels.toFixed(1)} MP)</span>
+                        </div>
+                        <div class="prediction-item">
+                            <span class="prediction-label">Aspect Ratio:</span>
+                            <span class="prediction-value">${aspectRatio.toFixed(2)}</span>
+                        </div>
+                        <div class="prediction-item">
+                            <span class="prediction-label">Brightness:</span>
+                            <span class="prediction-value">${brightness.toFixed(0)}/255</span>
+                        </div>
+                        <p>Issues:</p>
+                        <ul>
+                            ${issues.map(issue => `<li>${issue}</li>`).join('')}
+                        </ul>
+                    `;
+                    
+                    // Set suggestions content
+                    suggestionsPanel.innerHTML = `
+                        <h4>Improvement Suggestions:</h4>
+                        <ul class="suggestions-list">
+                            ${suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
+                        </ul>
+                    `;
+                    
+                    // Show suggestions button only for poor quality images
+                    suggestionsBtn.classList.remove('hidden');
+                    tryAnother.classList.remove('hidden');
+                    tryAnother.innerHTML = `<p>For better results, try uploading a higher quality image.</p>`;
+                }
+            }
+            
+            function getImageBrightness(imgElement) {
+                // Create a canvas to analyze brightness
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 100;
+                canvas.height = 100;
+                
+                // Draw image scaled down for performance
+                ctx.drawImage(imgElement, 0, 0, 100, 100);
+                const imageData = ctx.getImageData(0, 0, 100, 100).data;
+                
+                // Calculate average brightness
+                let brightnessSum = 0;
+                for (let i = 0; i < imageData.length; i += 4) {
+                    brightnessSum += (imageData[i] + imageData[i+1] + imageData[i+2]) / 3;
+                }
+                return brightnessSum / (imageData.length / 4);
+            }
+            
+            function toggleSuggestions() {
+                suggestionsVisible = !suggestionsVisible;
+                suggestionsPanel.classList.toggle('hidden', !suggestionsVisible);
+                suggestionsBtn.textContent = suggestionsVisible ? 'Hide Suggestions' : 'Show Suggestions';
+            }
+            
+            function toggleFunPanel() {
+                funVisible = !funVisible;
+                funPanel.classList.toggle('hidden', !funVisible);
+                funBtn.textContent = funVisible ? 'Hide Fun' : 'Social Media Fun';
+            }
+            
+            function downloadImage() {
+                if (!uploadedImage.src) return;
+                
+                const link = document.createElement('a');
+                link.href = uploadedImage.src;
+                link.download = 'analyzed-image-' + Date.now() + '.jpg';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            function removeImage() {
+                // Reset everything
+                uploadedImage.src = '';
+                fileInput.value = '';
+                imageContainer.classList.add('hidden');
+                analysisResult.classList.add('hidden');
+                downloadBtn.disabled = true;
+                removeBtn.disabled = true;
+                suggestionsBtn.classList.add('hidden');
+                funBtn.classList.add('hidden');
+                suggestionsPanel.classList.add('hidden');
+                funPanel.classList.add('hidden');
+                suggestionsVisible = false;
+                funVisible = false;
+            }
+            
+            function showLoading(show) {
+                if (show) {
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'loading';
+                    loadingDiv.id = 'loadingDiv';
+                    loadingDiv.innerHTML = `
+                        <div class="spinner"></div>
+                        <p>Analyzing your image...</p>
+                    `;
+                    dropArea.appendChild(loadingDiv);
+                } else {
+                    const loadingDiv = document.getElementById('loadingDiv');
+                    if (loadingDiv) {
+                        loadingDiv.remove();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
